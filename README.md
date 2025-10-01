@@ -1,2 +1,3 @@
 # oscillatory
-Oscillatory neural networks
+
+Oscillatory neural network in PyTorch.

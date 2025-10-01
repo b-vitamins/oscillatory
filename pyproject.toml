@@ -1,0 +1,11 @@
+[project]
+name = "oscillatory"
+version = "0.1.0"
+description = "Oscillatory Neural Networks"
+authors = [{name = "Ayan Das", email = "bvits@riseup.net"}]
+readme = "README.md"
+requires-python = ">=3.11"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
