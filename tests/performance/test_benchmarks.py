@@ -48,7 +48,7 @@ class TestFunctionalPerformance:
         # Benchmark
         start = time.time()
         for _ in range(10):
-            x_new, energy = kuramoto_step(
+            x_new = kuramoto_step(
                 x, coupling, stimulus, n_oscillators, spatial_ndim=2
             )
         elapsed = time.time() - start
@@ -74,7 +74,7 @@ class TestFunctionalPerformance:
         # Benchmark
         start = time.time()
         for _ in range(5):
-            x_new, energy = kuramoto_step(
+            x_new = kuramoto_step(
                 x, coupling, stimulus, n_oscillators, spatial_ndim=2
             )
         elapsed = time.time() - start

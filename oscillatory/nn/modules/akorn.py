@@ -211,8 +211,8 @@ class KuramotoBlock(nn.Module):
         x: Tensor,
         c: Tensor,
         n_timesteps: int,
-        gamma: float = 1.0,
-    ) -> Tuple[List[Tensor], List[Tensor]]:
+        gamma: Union[float, Tensor] = 1.0,
+    ) -> List[Tensor]:
         """Run Kuramoto dynamics for n_timesteps iterations.
 
         Args:
@@ -222,10 +222,9 @@ class KuramotoBlock(nn.Module):
             gamma: Step size for integration.
 
         Returns:
-            Tuple of (states, energies) lists per timestep.
+            List of oscillator states per timestep.
         """
         xs = []
-        es = [torch.zeros(x.shape[0], device=x.device, dtype=x.dtype)]
 
         c = self.c_norm(c)
         x = K.normalize_oscillators2d(x, self.n_oscillators)
@@ -239,7 +238,7 @@ class KuramotoBlock(nn.Module):
         for _ in range(n_timesteps):
             coupling = self.connectivity(x)
 
-            x, energy = K.kuramoto_step(
+            x = K.kuramoto_step(
                 x=x,
                 coupling=coupling,
                 stimulus=c,
@@ -252,9 +251,8 @@ class KuramotoBlock(nn.Module):
             )
 
             xs.append(x)
-            es.append(energy)
 
-        return xs, es
+        return xs
 
 
 class AKOrNHierarchical(nn.Module):
@@ -282,7 +280,7 @@ class AKOrNHierarchical(nn.Module):
         c_norm: Normalization type for stimulus.
         use_input_norm: Apply input normalization.
         out_channels: Output channels (defaults to last layer channels).
-        return_all_states: Return intermediate states and energies.
+        return_all_states: Return intermediate states.
         final_head: Optional final head module.
         input_norm_stats: Optional (mean, std) tuples for input normalization.
         use_positional_encoding: Add positional encoding to stem output.
@@ -321,7 +319,7 @@ class AKOrNHierarchical(nn.Module):
         super().__init__()
 
         self.num_layers = num_layers
-        self.gamma = Parameter(torch.tensor([gamma]), requires_grad=False)
+        self.register_buffer("gamma", torch.tensor(gamma))
         self.return_all_states = return_all_states
 
         n_oscillators = self._expand_param(n_oscillators, num_layers)
@@ -468,7 +466,7 @@ class AKOrNHierarchical(nn.Module):
                 return result[:length]
         return [param] * length
 
-    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor, List, List]]:
+    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor, List]]:
         x = self.input_norm(x)
         c = self.stem(x)
 
@@ -479,7 +477,6 @@ class AKOrNHierarchical(nn.Module):
         x = torch.randn_like(c)
 
         all_xs = []
-        all_es = []
 
         for trans_x, trans_c, kuramoto, readout, n_steps in zip(
             self.transitions_x,
@@ -491,9 +488,8 @@ class AKOrNHierarchical(nn.Module):
             x = trans_x(x)
             c = trans_c(c)
 
-            xs, es = kuramoto(x, c, n_steps, self.gamma.item())
+            xs = kuramoto(x, c, n_steps, self.gamma)
             all_xs.append(xs)
-            all_es.append(es)
 
             x = xs[-1]
             c = readout(x)
@@ -501,7 +497,7 @@ class AKOrNHierarchical(nn.Module):
         output = self.final_head(c) if self.final_head is not None else c
 
         if self.return_all_states:
-            return output, all_xs, all_es
+            return output, all_xs
         return output
 
 
@@ -532,7 +528,7 @@ class AKOrNDense(nn.Module):
         project: Unused (kept for compatibility).
         no_readout: Skip readout processing.
         c_norm: Normalization type for stimulus.
-        return_all_states: Return intermediate states and energies.
+        return_all_states: Return intermediate states.
         final_head: Optional final head module.
     """
 
@@ -568,7 +564,7 @@ class AKOrNDense(nn.Module):
 
         self.patch_size = patch_size
         self.num_layers = num_layers
-        self.gamma = Parameter(torch.tensor([gamma]), requires_grad=False)
+        self.register_buffer("gamma", torch.tensor(gamma))
         self.no_readout = no_readout
         self.return_all_states = return_all_states
 
@@ -647,7 +643,7 @@ class AKOrNDense(nn.Module):
     patchify_mean: Tensor
     patchify_std: Tensor
 
-    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor, List, List]]:
+    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor, List]]:
         if hasattr(self, "patchify_mean"):
             x = (x - self.patchify_mean) / self.patchify_std
         c = self.patchify(x)
@@ -661,14 +657,12 @@ class AKOrNDense(nn.Module):
             x = x + self.pos_embed_x
 
         all_xs = []
-        all_es = []
 
         for kuramoto, readout, n_steps in zip(
             self.kuramoto_blocks, self.readouts, self.n_timesteps
         ):
-            xs, es = kuramoto(x, c, n_steps, self.gamma.item())
+            xs = kuramoto(x, c, n_steps, self.gamma)
             all_xs.append(xs)
-            all_es.append(es)
 
             x = xs[-1]
             c = readout(x) if not self.no_readout else x
@@ -676,7 +670,7 @@ class AKOrNDense(nn.Module):
         output = self.final_head(c) if self.final_head is not None else c
 
         if self.return_all_states:
-            return output, all_xs, all_es
+            return output, all_xs
         return output
 
 
@@ -701,7 +695,7 @@ class AKOrNGrid(nn.Module):
         use_nonlinearity: Add nonlinear readout processing.
         out_channels: Unused (kept for compatibility).
         c_norm: Normalization type for stimulus.
-        return_all_states: Return intermediate states and energies.
+        return_all_states: Return intermediate states.
         final_head: Optional final head module.
         activation_order: Activation order for feedforward ('pre' or 'post').
     """
@@ -735,7 +729,7 @@ class AKOrNGrid(nn.Module):
         self.vocab_size = vocab_size
         self.num_layers = num_layers
         self.n_timesteps = n_timesteps
-        self.gamma = Parameter(torch.tensor([gamma]), requires_grad=False)
+        self.register_buffer("gamma", torch.tensor(gamma))
         self.return_all_states = return_all_states
 
         if vocab_size is not None:
@@ -799,7 +793,7 @@ class AKOrNGrid(nn.Module):
 
     def forward(
         self, x: Tensor, mask: Optional[Tensor] = None
-    ) -> Union[Tensor, Tuple[Tensor, List, List]]:
+    ) -> Union[Tensor, Tuple[Tensor, List]]:
         if self.embedding is not None:
             if x.dim() == 3:
                 c = self.embedding(x).permute(0, 3, 1, 2)
@@ -821,12 +815,10 @@ class AKOrNGrid(nn.Module):
             x = self.x0.expand(c.size(0), -1, -1, -1)
 
         all_xs = []
-        all_es = []
 
         for kuramoto, readout in zip(self.kuramoto_blocks, self.readouts):
-            xs, es = kuramoto(x, c, self.n_timesteps, self.gamma.item())
+            xs = kuramoto(x, c, self.n_timesteps, self.gamma)
             all_xs.append(xs)
-            all_es.append(es)
 
             x = xs[-1]
             c = readout(x)
@@ -834,5 +826,5 @@ class AKOrNGrid(nn.Module):
         output = self.final_head(c) if self.final_head is not None else c
 
         if self.return_all_states:
-            return output, all_xs, all_es
+            return output, all_xs
         return output

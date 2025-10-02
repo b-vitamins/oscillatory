@@ -140,7 +140,7 @@ class TestKuramotoStep:
         coupling = torch.randn(B, C, H, W)
         stimulus = torch.randn(B, C, H, W)
 
-        x_new, energy = kuramoto_step(
+        x_new = kuramoto_step(
             x=x,
             coupling=coupling,
             stimulus=stimulus,
@@ -152,7 +152,6 @@ class TestKuramotoStep:
 
         # Check shapes
         assert_shape(x_new, (B, C, H, W))
-        assert_shape(energy, (B,))
 
         # Check normalization
         x_reshaped = x_new.view(B, C // n_oscillators, n_oscillators, H, W)
@@ -165,7 +164,7 @@ class TestKuramotoStep:
         coupling = torch.randn(B, C, L)
         stimulus = torch.randn(B, C, L)
 
-        x_new, energy = kuramoto_step(
+        x_new = kuramoto_step(
             x=x,
             coupling=coupling,
             stimulus=stimulus,
@@ -174,7 +173,6 @@ class TestKuramotoStep:
         )
 
         assert_shape(x_new, (B, C, L))
-        assert_shape(energy, (B,))
 
     def test_3d_step(self):
         B, C, D, H, W = 2, 8, 4, 4, 4
@@ -183,7 +181,7 @@ class TestKuramotoStep:
         coupling = torch.randn(B, C, D, H, W)
         stimulus = torch.randn(B, C, D, H, W)
 
-        x_new, energy = kuramoto_step(
+        x_new = kuramoto_step(
             x=x,
             coupling=coupling,
             stimulus=stimulus,
@@ -192,7 +190,6 @@ class TestKuramotoStep:
         )
 
         assert_shape(x_new, (B, C, D, H, W))
-        assert_shape(energy, (B,))
 
     def test_omega_scalar(self):
         B, C, H, W = 2, 8, 4, 4
@@ -202,7 +199,7 @@ class TestKuramotoStep:
         stimulus = torch.randn(B, C, H, W)
         omega = torch.tensor(1.0)
 
-        x_new, energy = kuramoto_step(
+        x_new = kuramoto_step(
             x, coupling, stimulus, n_oscillators, omega=omega, spatial_ndim=2
         )
 
@@ -217,7 +214,7 @@ class TestKuramotoStep:
         stimulus = torch.randn(B, C, H, W)
         omega = torch.randn(n_groups)
 
-        x_new, energy = kuramoto_step(
+        x_new = kuramoto_step(
             x, coupling, stimulus, n_oscillators, omega=omega, spatial_ndim=2
         )
 
@@ -249,7 +246,7 @@ class TestKuramotoStep:
         coupling = torch.randn(B, C, H, W)
         stimulus = torch.randn(B, C, H, W)
 
-        x_new, energy = kuramoto_step(
+        x_new = kuramoto_step(
             x,
             coupling,
             stimulus,
@@ -267,7 +264,7 @@ class TestKuramotoStep:
         coupling = torch.randn(B, C, H, W)
         stimulus = torch.randn(B, C, H, W)
 
-        x_new, energy = kuramoto_step(
+        x_new = kuramoto_step(
             x, coupling, stimulus, n_oscillators, normalize=False, spatial_ndim=2
         )
 
@@ -278,19 +275,6 @@ class TestKuramotoStep:
         # At least some norms should deviate from 1
         assert not torch.allclose(norms, torch.ones_like(norms), atol=1e-3)
 
-    def test_energy_computation(self):
-        B, C, H, W = 2, 8, 4, 4
-        n_oscillators = 4
-        x = torch.randn(B, C, H, W)
-        coupling = torch.randn(B, C, H, W)
-        stimulus = torch.randn(B, C, H, W)
-
-        _, energy = kuramoto_step(x, coupling, stimulus, n_oscillators, spatial_ndim=2)
-
-        # Energy should be a scalar per batch element
-        assert_shape(energy, (B,))
-        assert_finite(energy)
-
     def test_gradient_flow(self):
         B, C, H, W = 2, 8, 4, 4
         n_oscillators = 4
@@ -298,11 +282,11 @@ class TestKuramotoStep:
         coupling = torch.randn(B, C, H, W, requires_grad=True)
         stimulus = torch.randn(B, C, H, W, requires_grad=True)
 
-        x_new, energy = kuramoto_step(
+        x_new = kuramoto_step(
             x, coupling, stimulus, n_oscillators, spatial_ndim=2
         )
 
-        loss = x_new.sum() + energy.sum()
+        loss = x_new.sum()
         loss.backward()
 
         assert x.grad is not None
@@ -348,15 +332,14 @@ class TestKuramotoStep:
         coupling2 = torch.randn(B, C, H, W)
         stimulus2 = torch.randn(B, C, H, W)
 
-        x_new1, energy1 = kuramoto_step(
+        x_new1 = kuramoto_step(
             x1, coupling1, stimulus1, n_oscillators, spatial_ndim=2
         )
-        x_new2, energy2 = kuramoto_step(
+        x_new2 = kuramoto_step(
             x2, coupling2, stimulus2, n_oscillators, spatial_ndim=2
         )
 
         assert torch.allclose(x_new1, x_new2)
-        assert torch.allclose(energy1, energy2)
 
 
 class TestKuramotoDynamicsProperties:
@@ -372,7 +355,7 @@ class TestKuramotoDynamicsProperties:
         coupling = torch.randn(B, C, H, W)
         stimulus = torch.randn(B, C, H, W)
 
-        x_new, _ = kuramoto_step(
+        x_new = kuramoto_step(
             x,
             coupling,
             stimulus,
@@ -396,19 +379,6 @@ class TestKuramotoDynamicsProperties:
         # Should be close to zero (tangent space property)
         assert torch.allclose(inner_product, torch.zeros_like(inner_product), atol=1e-5)
 
-    def test_energy_sign(self):
-        # Energy should be negative (by convention in the code)
-        B, C, H, W = 2, 8, 4, 4
-        n_oscillators = 4
-        x = torch.randn(B, C, H, W)
-        coupling = torch.randn(B, C, H, W)
-        stimulus = torch.randn(B, C, H, W)
-
-        _, energy = kuramoto_step(x, coupling, stimulus, n_oscillators, spatial_ndim=2)
-
-        # Energy is -full_similarity.sum(), typically negative for random inputs
-        assert_finite(energy)
-
     def test_multiple_steps_preserve_normalization(self):
         # Running multiple steps should maintain unit norm
         B, C, H, W = 2, 8, 4, 4
@@ -420,7 +390,7 @@ class TestKuramotoDynamicsProperties:
         stimulus = torch.randn(B, C, H, W)
 
         for _ in range(5):
-            x, _ = kuramoto_step(x, coupling, stimulus, n_oscillators, spatial_ndim=2)
+            x = kuramoto_step(x, coupling, stimulus, n_oscillators, spatial_ndim=2)
 
             # Check normalization maintained
             x_reshaped = x.view(B, C // n_oscillators, n_oscillators, H, W)

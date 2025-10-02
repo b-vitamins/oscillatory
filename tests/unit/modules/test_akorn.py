@@ -138,10 +138,9 @@ class TestAKOrNHierarchical:
             return_all_states=True,
         )
         x = torch.randn(2, 3, 32, 32)
-        out, all_xs, all_es = model(x)
+        out, all_xs = model(x)
 
         assert len(all_xs) == 2  # num_layers
-        assert len(all_es) == 2
 
     def test_different_layer_counts(self):
         for num_layers in [1, 2, 3, 4]:
@@ -331,10 +330,9 @@ class TestAKOrNDense:
             return_all_states=True,
         )
         x = torch.randn(2, 3, 128, 128)
-        out, all_xs, all_es = model(x)
+        out, all_xs = model(x)
 
         assert len(all_xs) == 2
-        assert len(all_es) == 2
 
     def test_different_patch_sizes(self):
         for patch_size in [2, 4, 8]:
@@ -493,10 +491,9 @@ class TestAKOrNGrid:
             return_all_states=True,
         )
         x = torch.randint(0, 10, (2, 9, 9))
-        out, all_xs, all_es = model(x)
+        out, all_xs = model(x)
 
         assert len(all_xs) == 2
-        assert len(all_es) == 2
 
     def test_gradient_flow(self, gradient_checker):
         model = AKOrNGrid(
@@ -528,7 +525,7 @@ class TestAKOrNModelProperties:
         )
 
         x = torch.randn(1, 3, 64, 64)
-        out, all_xs, all_es = model(x)
+        out, all_xs = model(x)
 
         # Check each timestep maintains normalization
         for xs_per_layer in all_xs:
@@ -539,29 +536,6 @@ class TestAKOrNModelProperties:
                 # Check unit norm
                 norms = x_reshaped.norm(dim=2, p=2)
                 assert torch.allclose(norms, torch.ones_like(norms), atol=1e-5)
-
-    def test_energy_convergence(self):
-        # Energy should generally decrease over timesteps
-        model = AKOrNDense(
-            image_size=64,
-            patch_size=4,
-            in_channels=3,
-            embed_dim=64,
-            num_layers=1,
-            n_oscillators=4,
-            n_timesteps=10,
-            return_all_states=True,
-        )
-
-        x = torch.randn(1, 3, 64, 64)
-        out, all_xs, all_es = model(x)
-
-        # Energy trajectory
-        energies = all_es[0]  # First (only) layer
-        # Generally should trend toward lower energy (more negative in this formulation)
-        # Just check they're finite and computed
-        for e in energies:
-            assert_finite(e)
 
     def test_deterministic_with_seed(self):
         # Same seed should give same results

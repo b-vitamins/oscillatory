@@ -5,7 +5,7 @@ Oscillatory Recurrent Networks (AKOrN), including oscillator normalization,
 tangent space projection, and coupled oscillator dynamics.
 """
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import torch
 from torch import Tensor
@@ -269,11 +269,11 @@ def kuramoto_step(
     stimulus: Tensor,
     n_oscillators: int,
     omega: Optional[Tensor] = None,
-    step_size: float = 1.0,
+    step_size: Union[float, Tensor] = 1.0,
     apply_projection: bool = True,
     normalize: bool = True,
     spatial_ndim: int = 2,
-) -> Tuple[Tensor, Tensor]:
+) -> Tensor:
     """Perform one step of Kuramoto oscillator dynamics.
 
     Implements: x_{t+1} = normalize(x_t + step_size * (omega_term + proj(coupling + stimulus)))
@@ -290,7 +290,7 @@ def kuramoto_step(
         spatial_ndim: Number of spatial dimensions (1, 2, or 3)
 
     Returns:
-        Tuple of (updated state, energy)
+        Updated oscillator state
     """
     y = coupling + stimulus
     B, C = x.shape[0], x.shape[1]
@@ -330,11 +330,10 @@ def kuramoto_step(
 
     # Project onto tangent space if requested
     if apply_projection:
-        y_projected_reshaped, full_similarity_reshaped = _project_to_tangent_space(
+        y_projected_reshaped, _ = _project_to_tangent_space(
             y_reshaped, x_reshaped
         )
     else:
-        full_similarity_reshaped = y_reshaped * x_reshaped
         y_projected_reshaped = y_reshaped
 
     # Update and normalize
@@ -345,7 +344,5 @@ def kuramoto_step(
         x_new_reshaped = norm_fn(x_new_reshaped)
 
     x_new = x_new_reshaped.view(*final_shape)
-    full_similarity = full_similarity_reshaped.view(*final_shape)
-    energy = -full_similarity.view(B, -1).sum(dim=-1)
 
-    return x_new, energy
+    return x_new

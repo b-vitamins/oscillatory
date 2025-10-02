@@ -393,19 +393,14 @@ class TestStateRetrieval:
         )
 
         images = torch.randn(1, 3, 32, 32)
-        output, all_xs, all_es = model(images)
+        output, all_xs = model(images)
 
         # Should have states for each layer
         assert len(all_xs) == 2
-        assert len(all_es) == 2
 
         # Each layer should have states for each timestep
         for xs in all_xs:
             assert len(xs) == 3  # n_timesteps
-
-        # Energies include initial (0) + n_timesteps
-        for es in all_es:
-            assert len(es) == 4  # 1 + n_timesteps
 
     def test_dense_state_retrieval(self):
         """Test retrieving states from dense model."""
@@ -421,10 +416,9 @@ class TestStateRetrieval:
         )
 
         images = torch.randn(1, 3, 64, 64)
-        output, all_xs, all_es = model(images)
+        output, all_xs = model(images)
 
         assert len(all_xs) == 2
-        assert len(all_es) == 2
 
     def test_grid_state_retrieval(self):
         """Test retrieving states from grid model."""
@@ -439,10 +433,9 @@ class TestStateRetrieval:
         )
 
         grids = torch.randint(0, 10, (1, 6, 6))
-        output, all_xs, all_es = model(grids)
+        output, all_xs = model(grids)
 
         assert len(all_xs) == 2
-        assert len(all_es) == 2
 
 
 class TestBatchProcessing:

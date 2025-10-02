@@ -375,13 +375,12 @@ class TestDeterminismProperties:
             coupling = torch.randn(B, C, H, W)
             stimulus = torch.randn(B, C, H, W)
 
-            x_new, energy = kuramoto_step(
+            x_new = kuramoto_step(
                 x, coupling, stimulus, n_oscillators, spatial_ndim=2
             )
-            results.append((x_new, energy))
+            results.append(x_new)
 
-        assert torch.allclose(results[0][0], results[1][0])
-        assert torch.allclose(results[0][1], results[1][1])
+        assert torch.allclose(results[0], results[1])
 
     def test_gta_matrices_deterministic(self):
         """Same inputs should give same GTA matrices."""
