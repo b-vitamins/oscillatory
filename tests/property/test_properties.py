@@ -127,7 +127,7 @@ class TestKuramotoStepProperties:
         if spatial_ndim == 2:
             x = normalize_oscillators2d(x, n_oscillators)
 
-        x_new, _ = kuramoto_step(
+        x_new = kuramoto_step(
             x,
             coupling,
             stimulus,
@@ -157,7 +157,7 @@ class TestKuramotoStepProperties:
         coupling = torch.randn(B, C, H, W) * 0.1
         stimulus = torch.randn(B, C, H, W) * 0.1
 
-        x_new, _ = kuramoto_step(
+        x_new = kuramoto_step(
             x.clone(),
             coupling,
             stimulus,
@@ -375,9 +375,7 @@ class TestDeterminismProperties:
             coupling = torch.randn(B, C, H, W)
             stimulus = torch.randn(B, C, H, W)
 
-            x_new = kuramoto_step(
-                x, coupling, stimulus, n_oscillators, spatial_ndim=2
-            )
+            x_new = kuramoto_step(x, coupling, stimulus, n_oscillators, spatial_ndim=2)
             results.append(x_new)
 
         assert torch.allclose(results[0], results[1])

@@ -1,11 +1,12 @@
 [project]
 name = "oscillatory"
 version = "0.1.0"
-description = "Oscillatory Neural Networks"
+description = "Oscillatory Neural Networks in PyTorch"
 authors = [{name = "Ayan Das", email = "bvits@riseup.net"}]
 readme = "README.md"
 requires-python = ">=3.11"
+dynamic = ["dependencies", "optional-dependencies", "classifiers"]
 
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools", "torch"]
 build-backend = "setuptools.build_meta"

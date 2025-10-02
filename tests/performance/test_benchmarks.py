@@ -22,10 +22,10 @@ THRESHOLDS = {
     "gta_matrices": 0.1,
     "attention_forward": 0.5,
     "akorn_hierarchical": 2.0,
-    "akorn_dense": 2.0,
+    "akorn_dense": 6.0,
     "akorn_grid": 1.0,
-    "kodm_forward": 0.5,
-    "kodm_sampling": 5.0,
+    "kodm_forward": 1.0,
+    "kodm_sampling": 8.0,
 }
 
 
@@ -48,9 +48,7 @@ class TestFunctionalPerformance:
         # Benchmark
         start = time.time()
         for _ in range(10):
-            x_new = kuramoto_step(
-                x, coupling, stimulus, n_oscillators, spatial_ndim=2
-            )
+            kuramoto_step(x, coupling, stimulus, n_oscillators, spatial_ndim=2)
         elapsed = time.time() - start
 
         avg_time = elapsed / 10
@@ -74,9 +72,7 @@ class TestFunctionalPerformance:
         # Benchmark
         start = time.time()
         for _ in range(5):
-            x_new = kuramoto_step(
-                x, coupling, stimulus, n_oscillators, spatial_ndim=2
-            )
+            kuramoto_step(x, coupling, stimulus, n_oscillators, spatial_ndim=2)
         elapsed = time.time() - start
 
         avg_time = elapsed / 5

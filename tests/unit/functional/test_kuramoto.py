@@ -282,9 +282,7 @@ class TestKuramotoStep:
         coupling = torch.randn(B, C, H, W, requires_grad=True)
         stimulus = torch.randn(B, C, H, W, requires_grad=True)
 
-        x_new = kuramoto_step(
-            x, coupling, stimulus, n_oscillators, spatial_ndim=2
-        )
+        x_new = kuramoto_step(x, coupling, stimulus, n_oscillators, spatial_ndim=2)
 
         loss = x_new.sum()
         loss.backward()
@@ -332,12 +330,8 @@ class TestKuramotoStep:
         coupling2 = torch.randn(B, C, H, W)
         stimulus2 = torch.randn(B, C, H, W)
 
-        x_new1 = kuramoto_step(
-            x1, coupling1, stimulus1, n_oscillators, spatial_ndim=2
-        )
-        x_new2 = kuramoto_step(
-            x2, coupling2, stimulus2, n_oscillators, spatial_ndim=2
-        )
+        x_new1 = kuramoto_step(x1, coupling1, stimulus1, n_oscillators, spatial_ndim=2)
+        x_new2 = kuramoto_step(x2, coupling2, stimulus2, n_oscillators, spatial_ndim=2)
 
         assert torch.allclose(x_new1, x_new2)
 

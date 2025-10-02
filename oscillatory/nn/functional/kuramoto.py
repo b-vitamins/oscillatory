@@ -330,15 +330,13 @@ def kuramoto_step(
 
     # Project onto tangent space if requested
     if apply_projection:
-        y_projected_reshaped, _ = _project_to_tangent_space(
-            y_reshaped, x_reshaped
-        )
+        y_projected_reshaped, _ = _project_to_tangent_space(y_reshaped, x_reshaped)
     else:
         y_projected_reshaped = y_reshaped
 
     # Update and normalize
     delta_x_reshaped = omega_term_reshaped + y_projected_reshaped
-    x_new_reshaped = torch.add(x_reshaped, delta_x_reshaped, alpha=step_size)
+    x_new_reshaped = x_reshaped.add(delta_x_reshaped * step_size)
 
     if normalize:
         x_new_reshaped = norm_fn(x_new_reshaped)
